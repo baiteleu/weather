@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#07111f">
+<title>Погода · Актау</title>
+<style>
+:root{--c:#00cfff;--s:#ff9500;--r:#4a9eff;--bg:#07111f}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+::-webkit-scrollbar{display:none}
+body{background:var(--bg);color:#fff;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;display:flex;justify-content:center;overflow-x:hidden}
+.phone{width:100%;max-width:430px;min-height:100vh;background:linear-gradient(175deg,#0c2040 0%,#07111f 55%,#030b16 100%);position:relative;overflow-x:hidden;padding-bottom:96px}
+.glow{position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:380px;height:380px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(0,207,255,.09) 0%,transparent 70%)}
+.hidden{display:none!important}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:32px;text-align:center}
+
+/* Loading */
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+.wave{font-size:56px;animation:pulse 2s ease-in-out infinite}
+.city-nm{font-size:30px;font-weight:800;letter-spacing:5px;color:var(--c);margin-top:16px}
+.ld-txt{color:rgba(255,255,255,.35);font-size:14px;margin-top:8px}
+.progress{margin-top:24px;width:180px;height:3px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;width:45%;background:var(--c);border-radius:2px;animation:shimmer 1.4s ease-in-out infinite}
+
+/* Error */
+.err-title{font-size:18px;font-weight:700;margin:16px 0 12px}
+.err-box{font-size:14px;color:rgba(255,200,100,.95);background:rgba(255,150,0,.09);border:1px solid rgba(255,150,0,.28);border-radius:12px;padding:12px 16px;max-width:300px;margin-bottom:10px;line-height:1.55}
+.err-sub{font-size:12px;color:rgba(255,255,255,.3);margin:6px 0}
+.err-link{display:block;font-size:12px;color:rgba(0,207,255,.7);margin-bottom:24px;text-decoration:underline}
+.btn-main{background:var(--c);color:#07111f;border:none;border-radius:40px;padding:13px 36px;font-size:15px;font-weight:800;cursor:pointer}
+
+/* Card */
+.card{background:rgba(255,255,255,.04);border-radius:20px;border:1px solid rgba(255,255,255,.07)}
+
+/* Header */
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:50px 22px 14px;position:relative;z-index:1}
+.hdr-city{font-size:22px;font-weight:800}
+.hdr-date{font-size:13px;color:rgba(255,255,255,.35);margin-top:3px}
+.hdr-btns{display:flex;gap:10px}
+.ico-btn{width:42px;height:42px;border-radius:13px;cursor:pointer;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.05);color:rgba(255,255,255,.5);font-size:19px;display:flex;align-items:center;justify-content:center}
+.ico-btn.on{background:rgba(0,207,255,.14);border-color:rgba(0,207,255,.45);color:var(--c)}
+
+/* Hero */
+.hero{padding:0 20px;position:relative;z-index:1}
+.hero-card{padding:28px 24px 22px;overflow:hidden;position:relative}
+.hero-glow{position:absolute;top:-50px;right:-20px;width:200px;height:200px;border-radius:50%;pointer-events:none}
+.hero-row{display:flex;align-items:flex-start;justify-content:space-between}
+.temp-big{font-size:88px;font-weight:800;line-height:1;letter-spacing:-3px}
+.cond-lbl{font-size:18px;font-weight:600;margin-top:4px;color:rgba(255,255,255,.85)}
+.feels{font-size:13px;color:rgba(255,255,255,.4);margin-top:6px}
+.minmax{margin-top:5px;font-size:14px}
+.emoji-big{font-size:70px;line-height:1}
+.sun-strip{margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.07);display:flex;gap:22px}
+.sun-item{display:flex;align-items:center;gap:7px}
+.sun-ico{font-size:18px}
+.sun-lbl{font-size:10px;color:rgba(255,255,255,.33);text-transform:uppercase;letter-spacing:.8px}
+.sun-val{font-size:14px;font-weight:700}
+
+/* Stats */
+.stats{padding:14px 20px 0;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;position:relative;z-index:1}
+.stat{border-radius:16px;padding:13px 8px;text-align:center}
+.stat-ico{font-size:24px}
+.stat-lbl{font-size:9px;color:rgba(255,255,255,.33);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+.stat-val{font-size:16px;font-weight:800;margin-top:2px}
+.stat-sub{font-size:11px;color:rgba(255,255,255,.33);margin-top:1px}
+
+/* Hourly */
+.hourly{padding-top:20px;position:relative;z-index:1}
+.sec-lbl{padding-left:20px;font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px}
+.h-scroll{display:flex;overflow-x:auto;padding:0 20px;gap:8px;-webkit-overflow-scrolling:touch}
+.h-card{flex-shrink:0;width:64px;padding:11px 5px;text-align:center;border-radius:16px;background:rgba(255,255,255,.033);border:1px solid rgba(255,255,255,.06)}
+.h-card.now{background:rgba(0,207,255,.11);border-color:rgba(0,207,255,.38)}
+.h-lbl{font-size:11px;color:rgba(255,255,255,.37);margin-bottom:5px}
+.h-card.now .h-lbl{color:var(--c);font-weight:700}
+.h-ico{font-size:22px}
+.h-temp{font-size:15px;font-weight:700;margin-top:5px}
+.h-precip{font-size:10px;color:var(--r);margin-top:2px}
+
+/* Tabs */
+.tabs{padding:18px 20px 0;position:relative;z-index:1}
+.tab-bar{display:flex;background:rgba(255,255,255,.03);border-radius:14px;padding:4px;border:1px solid rgba(255,255,255,.07)}
+.tab-btn{flex:1;padding:9px 4px;border-radius:10px;border:1px solid transparent;background:transparent;color:rgba(255,255,255,.38);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.tab-btn.on{border-color:rgba(0,207,255,.28);background:rgba(0,207,255,.12);color:var(--c)}
+
+/* Tab panels */
+.tabs-body{padding:14px 20px;position:relative;z-index:1}
+#tp-today{padding:16px 18px}
+#tp-week{padding:0;overflow:hidden;display:none}
+#tp-chart{padding:20px 12px 16px;display:none}
+
+.d-row{display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,.05)}
+.d-row:last-child{padding-bottom:0;margin-bottom:0;border-bottom:none}
+.d-left{display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.65)}
+.d-val{font-size:15px;font-weight:700}
+
+.w-row{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.05);border-left:3px solid transparent}
+.w-row:last-child{border-bottom:none}
+.w-row.today{background:rgba(0,207,255,.05);border-left-color:var(--c)}
+.w-day{width:68px}
+.w-name{font-size:14px;font-weight:500}
+.w-row.today .w-name{font-weight:700;color:var(--c)}
+.w-date{font-size:11px;color:rgba(255,255,255,.3);margin-top:1px}
+.w-ico{font-size:26px;margin-right:10px}
+.w-cond{flex:1;font-size:12px;color:rgba(255,255,255,.4)}
+.w-temps{text-align:right}
+.w-precip{font-size:10px;color:var(--r);margin-top:2px}
+
+/* Chart */
+.chart-lbl{font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px;padding-left:6px}
+.chart-leg{display:flex;justify-content:center;gap:24px;margin-top:12px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.42)}
+.leg-line{width:18px;height:3px;border-radius:2px}
+
+/* Toast */
+.toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:9999;background:rgba(0,207,255,.14);border:1px solid rgba(0,207,255,.45);backdrop-filter:blur(12px);color:var(--c);border-radius:40px;padding:10px 22px;font-size:13px;font-weight:700;white-space:nowrap;pointer-events:none}
+
+/* Bottom bar */
+.btm{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:100;background:rgba(4,12,24,.95);backdrop-filter:blur(20px);border-top:1px solid rgba(255,255,255,.06);padding:12px 24px 28px;display:flex;justify-content:space-between;align-items:center}
+.bb-lbl{font-size:9px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px}
+.bb-val{font-size:13px;color:var(--c);font-weight:700;margin-top:2px}
+.btn-ref{background:rgba(0,207,255,.1);border:1px solid rgba(0,207,255,.4);border-radius:40px;padding:9px 20px;color:var(--c);font-size:13px;font-weight:700;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="glow"></div>
+
+  <!-- Loading -->
+  <div class="center" id="s-load">
+    <div class="wave">🌊</div>
+    <div class="city-nm">АКТАУ</div>
+    <div class="ld-txt">Загрузка прогноза...</div>
+    <div class="progress"><div class="progress-fill"></div></div>
+  </div>
+
+  <!-- Error -->
+  <div class="center hidden" id="s-err">
+    <div style="font-size:52px">⛈️</div>
+    <div class="err-title">Не удалось загрузить<br>данные погоды</div>
+    <div class="err-box" id="err-box">Нажмите ··· вверху и выберите «Открыть в Safari», затем повторите</div>
+    <div class="err-sub">Проверены все 4 источника данных</div>
+    <a id="err-link" href="https://api.open-meteo.com/v1/forecast?latitude=43.6509&longitude=51.1734&current=temperature_2m&timezone=Asia%2FAqtau" target="_blank" class="err-link">Проверить API в браузере ↗</a>
+    <button class="btn-main" onclick="init()">🔄 Повторить</button>
+  </div>
+
+  <!-- Main -->
+  <div class="hidden" id="s-main">
+    <!-- Header -->
+    <div class="hdr">
+      <div>
+        <div class="hdr-city">📍 Актау</div>
+        <div class="hdr-date" id="hdr-date"></div>
+      </div>
+      <div class="hdr-btns">
+        <button class="ico-btn" id="btn-bell" onclick="toggleNotif()">🔕</button>
+        <button class="ico-btn" onclick="init()">🔄</button>
+      </div>
+    </div>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="card hero-card">
+        <div class="hero-glow" id="hero-glow"></div>
+        <div class="hero-row">
+          <div>
+            <div class="temp-big" id="temp-now">--°</div>
+            <div class="cond-lbl" id="cond-now">--</div>
+            <div class="feels" id="feels">Ощущается --°</div>
+            <div class="minmax" id="minmax"></div>
+          </div>
+          <div class="emoji-big" id="emoji-now">❓</div>
+        </div>
+        <div class="sun-strip">
+          <div class="sun-item">
+            <span class="sun-ico">🌅</span>
+            <div><div class="sun-lbl">Восход</div><div class="sun-val" id="sunrise">--:--</div></div>
+          </div>
+          <div class="sun-item">
+            <span class="sun-ico">🌇</span>
+            <div><div class="sun-lbl">Закат</div><div class="sun-val" id="sunset">--:--</div></div>
+          </div>
+          <div class="sun-item">
+            <span class="sun-ico">🌊</span>
+            <div><div class="sun-lbl">Каспий</div><div class="sun-val">Прибрежный</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+      <div class="card stat">
+        <div class="stat-ico">💨</div>
+        <div class="stat-lbl">Ветер</div>
+        <div class="stat-val" id="wind-v">--</div>
+        <div class="stat-sub" id="wind-d">--</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-ico">💧</div>
+        <div class="stat-lbl">Влажность</div>
+        <div class="stat-val" id="hum-v">--%</div>
+        <div class="stat-sub" id="hum-s">--</div>
+      </div>
+      <div class="card stat">
+        <div class="stat-ico">🌀</div>
+        <div class="stat-lbl">Давление</div>
+        <div class="stat-val" id="pres-v">----</div>
+        <div class="stat-sub">гПа</div>
+      </div>
+    </div>
+
+    <!-- Hourly -->
+    <div class="hourly">
+      <div class="sec-lbl">Почасовой прогноз · 24 часа</div>
+      <div class="h-scroll" id="h-scroll"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <div class="tab-bar">
+        <button class="tab-btn on" data-t="today" onclick="setTab('today')">📅 Сегодня</button>
+        <button class="tab-btn" data-t="week" onclick="setTab('week')">🗓 Неделя</button>
+        <button class="tab-btn" data-t="chart" onclick="setTab('chart')">📈 График</button>
+      </div>
+    </div>
+
+    <!-- Tab content -->
+    <div class="tabs-body">
+      <div class="card" id="tp-today"></div>
+      <div class="card" id="tp-week"></div>
+      <div class="card" id="tp-chart">
+        <div class="chart-lbl">Температура · 7 дней</div>
+        <svg id="chart-svg" viewBox="0 0 320 110" style="width:100%;overflow:visible" height="130"></svg>
+        <div class="chart-leg">
+          <div class="leg-item"><div class="leg-line" style="background:#ff9500"></div>Максимум</div>
+          <div class="leg-item"><div class="leg-line" style="background:#00cfff"></div>Минимум</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom bar -->
+<div class="btm hidden" id="btm">
+  <div><div class="bb-lbl">Обновлено</div><div class="bb-val" id="bb-time">--:--</div></div>
+  <div style="text-align:center"><div class="bb-lbl">Каспий</div><div style="font-size:22px;margin-top:2px">🌊</div></div>
+  <button class="btn-ref" onclick="init()">🔄 Обновить</button>
+</div>
+
+<!-- Toast -->
+<div class="toast hidden" id="toast"></div>
+
+<script>
+/* ── WMO codes ────────────────────────────────────────────── */
+var WMO={0:["Ясно","☀️"],1:["Преимущ. ясно","🌤️"],2:["Облачно","⛅"],3:["Пасмурно","☁️"],
+  45:["Туман","🌫️"],48:["Гололёд","🌫️"],51:["Морось","🌦️"],53:["Морось","🌦️"],
+  55:["Сильная морось","🌧️"],61:["Дождь","🌧️"],63:["Умер. дождь","🌧️"],65:["Сильный дождь","🌧️"],
+  71:["Снег","❄️"],73:["Умер. снег","❄️"],75:["Сильный снег","❄️"],80:["Ливень","🌦️"],
+  81:["Ливень","🌧️"],82:["Сильный ливень","⛈️"],85:["Снегопад","🌨️"],86:["Метель","🌨️"],
+  95:["Гроза","⛈️"],96:["Гроза с градом","⛈️"],99:["Гроза","⛈️"]};
+function wmo(c){return WMO[c]||["Неизвестно","❓"];}
+
+var DS=["Вс","Пн","Вт","Ср","Чт","Пт","Сб"];
+var DF=["Воскресенье","Понедельник","Вторник","Среда","Четверг","Пятница","Суббота"];
+var MG=["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+var MS=["янв","фев","мар","апр","май","июн","июл","авг","сен","окт","ноя","дек"];
+var DIRS=["С","ССВ","СВ","ВСВ","В","ВЮВ","ЮВ","ЮЮВ","Ю","ЮЮЗ","ЮЗ","ЗЮЗ","З","ЗСЗ","СЗ","ССЗ"];
+
+function wdir(d){return DIRS[Math.round(d/22.5)%16];}
+function pad(n){return String(n).padStart(2,"0");}
+function fmtT(iso){var d=new Date(iso);return pad(d.getHours())+":"+pad(d.getMinutes());}
+function clock(){var d=new Date();return pad(d.getHours())+":"+pad(d.getMinutes());}
+function dateStr(){var d=new Date();return DF[d.getDay()]+", "+d.getDate()+" "+MG[d.getMonth()];}
+
+/* ── API ──────────────────────────────────────────────────── */
+var BASE="https://api.open-meteo.com/v1/forecast?latitude=43.6509&longitude=51.1734"+
+  "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure"+
+  "&hourly=temperature_2m,weather_code,precipitation_probability"+
+  "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,sunrise,sunset"+
+  "&wind_speed_unit=ms&timezone=Asia%2FAqtau&forecast_days=7";
+
+var SRCS=[
+  {url:BASE,                                         ok:function(r){return r;}},
+  {url:"https://corsproxy.io/?"+BASE,               ok:function(r){return r;}},
+  {url:"https://api.allorigins.win/get?url="+encodeURIComponent(BASE), ok:function(r){return JSON.parse(r.contents);}},
+  {url:"https://corsproxy.io/?"+encodeURIComponent(BASE), ok:function(r){return r;}}
+];
+
+function fetchOne(url,parseFn,ms){
+  return new Promise(function(res,rej){
+    var ctrl=new AbortController();
+    var tid=setTimeout(function(){ctrl.abort();},ms||9000);
+    fetch(url,{signal:ctrl.signal})
+      .then(function(r){
+        clearTimeout(tid);
+        if(!r.ok)throw new Error("HTTP "+r.status);
+        return r.json();
+      })
+      .then(function(raw){
+        var d=parseFn(raw);
+        if(!d||!d.current)throw new Error("bad data");
+        res(d);
+      })
+      .catch(function(e){clearTimeout(tid);rej(e);});
+  });
+}
+
+/* ── State ────────────────────────────────────────────────── */
+var notifOn=false;
+var wdata=null;
+var clockTid=null;
+
+/* ── Show screen ─────────────────────────────────────────── */
+function show(id){
+  ["s-load","s-err","s-main"].forEach(function(s){
+    var el=document.getElementById(s);
+    el&&el.classList.toggle("hidden",s!==id);
+  });
+  var btm=document.getElementById("btm");
+  if(btm)btm.classList.toggle("hidden",id!=="s-main");
+}
+
+/* ── Toast ────────────────────────────────────────────────── */
+var toastTid;
+function showToast(msg){
+  var el=document.getElementById("toast");
+  el.textContent=msg;
+  el.classList.remove("hidden");
+  clearTimeout(toastTid);
+  toastTid=setTimeout(function(){el.classList.add("hidden");},3000);
+}
+
+/* ── Init / fetch ─────────────────────────────────────────── */
+async function init(){
+  show("s-load");
+  for(var i=0;i<SRCS.length;i++){
+    try{
+      var d=await fetchOne(SRCS[i].url,SRCS[i].ok,9000);
+      wdata=d;
+      render(d);
+      return;
+    }catch(e){}
+  }
+  show("s-err");
+}
+
+/* ── Clock ────────────────────────────────────────────────── */
+function startClock(){
+  function tick(){
+    var t=clock();
+    var el1=document.getElementById("hdr-date");
+    var el2=document.getElementById("bb-time");
+    if(el1)el1.textContent=dateStr()+" · "+t;
+    if(el2)el2.textContent=t;
+  }
+  tick();
+  clearInterval(clockTid);
+  clockTid=setInterval(tick,60000);
+}
+
+/* ── Render ───────────────────────────────────────────────── */
+function render(d){
+  var cur=d.current, daily=d.daily, hourly=d.hourly;
+  var w=wmo(cur.weather_code);
+
+  $("temp-now",Math.round(cur.temperature_2m)+"°");
+  $("cond-now",w[0]);
+  $("emoji-now",w[1]);
+  $("feels","Ощущается "+Math.round(cur.apparent_temperature)+"°");
+  document.getElementById("minmax").innerHTML=
+    '<span style="color:#ff9500;font-weight:700">↑ '+Math.round(daily.temperature_2m_max[0])+'°</span>'+
+    '&nbsp;&nbsp;<span style="color:#4a9eff;font-weight:700">↓ '+Math.round(daily.temperature_2m_min[0])+'°</span>';
+
+  var g=document.getElementById("hero-glow");
+  g.style.background=cur.weather_code<=1
+    ?"radial-gradient(circle,rgba(255,149,0,.22) 0%,transparent 70%)"
+    :cur.weather_code<=3
+    ?"radial-gradient(circle,rgba(130,150,200,.15) 0%,transparent 70%)"
+    :"radial-gradient(circle,rgba(74,158,255,.14) 0%,transparent 70%)";
+
+  $("sunrise",fmtT(daily.sunrise[0]));
+  $("sunset",fmtT(daily.sunset[0]));
+
+  $("wind-v",cur.wind_speed_10m.toFixed(1)+" м/с");
+  $("wind-d",wdir(cur.wind_direction_10m));
+  $("hum-v",cur.relative_humidity_2m+"%");
+  $("hum-s",cur.relative_humidity_2m<40?"Сухо":cur.relative_humidity_2m<70?"Норма":"Влажно");
+  $("pres-v",Math.round(cur.surface_pressure));
+
+  /* Hourly */
+  var now=new Date();
+  var hi=hourly.time.findIndex(function(t){
+    var dt=new Date(t);
+    return dt.getDate()===now.getDate()&&dt.getHours()===now.getHours();
+  });
+  var hrs=[];
+  if(hi>=0){
+    for(var i=0;i<Math.min(24,hourly.time.length-hi);i++){
+      var idx=hi+i;
+      var h=new Date(hourly.time[idx]).getHours();
+      hrs.push({
+        lbl:i===0?"Сейчас":h+":00",
+        temp:Math.round(hourly.temperature_2m[idx]),
+        ico:wmo(hourly.weather_code[idx])[1],
+        precip:hourly.precipitation_probability[idx],
+        now:i===0
+      });
+    }
+  }
+  document.getElementById("h-scroll").innerHTML=hrs.map(function(h){
+    return '<div class="h-card'+(h.now?" now":"")+'">'+
+      '<div class="h-lbl">'+h.lbl+'</div>'+
+      '<div class="h-ico">'+h.ico+'</div>'+
+      '<div class="h-temp">'+h.temp+'°</div>'+
+      (h.precip>0?'<div class="h-precip">'+h.precip+'%</div>':'')+
+      '</div>';
+  }).join("");
+
+  /* Today tab */
+  var rows=[
+    ["🌡️","Максимум",Math.round(daily.temperature_2m_max[0])+"°C"],
+    ["🌡️","Минимум",Math.round(daily.temperature_2m_min[0])+"°C"],
+    ["🌧️","Осадки",daily.precipitation_sum[0]+" мм"],
+    ["💨","Макс. ветер",daily.wind_speed_10m_max[0].toFixed(1)+" м/с"],
+    ["🌅","Восход",fmtT(daily.sunrise[0])],
+    ["🌇","Закат",fmtT(daily.sunset[0])]
+  ];
+  document.getElementById("tp-today").innerHTML=
+    '<div style="font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Детальный прогноз на сегодня</div>'+
+    rows.map(function(r){
+      return '<div class="d-row"><div class="d-left"><span>'+r[0]+'</span><span>'+r[1]+'</span></div><div class="d-val">'+r[2]+'</div></div>';
+    }).join("");
+
+  /* Week tab */
+  var today=now.toDateString();
+  document.getElementById("tp-week").innerHTML=daily.time.map(function(t,i){
+    var dt=new Date(t);
+    var isT=dt.toDateString()===today;
+    var w2=wmo(daily.weather_code[i]);
+    return '<div class="w-row'+(isT?" today":"")+'">'+
+      '<div class="w-day">'+
+        '<div class="w-name">'+(isT?"Сегодня":DS[dt.getDay()])+'</div>'+
+        '<div class="w-date">'+dt.getDate()+" "+MS[dt.getMonth()]+'</div>'+
+      '</div>'+
+      '<div class="w-ico">'+w2[1]+'</div>'+
+      '<div class="w-cond">'+w2[0]+'</div>'+
+      '<div class="w-temps">'+
+        '<span style="color:#ff9500;font-weight:700;font-size:14px">↑'+Math.round(daily.temperature_2m_max[i])+'°</span>'+
+        '<span style="color:rgba(255,255,255,.2);font-size:14px"> · </span>'+
+        '<span style="color:#4a9eff;font-weight:700;font-size:14px">↓'+Math.round(daily.temperature_2m_min[i])+'°</span>'+
+        (daily.precipitation_sum[i]>0?'<div class="w-precip">💧 '+daily.precipitation_sum[i]+'мм</div>':'')+
+      '</div>'+
+    '</div>';
+  }).join("");
+
+  /* Chart */
+  drawChart(daily);
+
+  show("s-main");
+  startClock();
+}
+
+/* ── SVG Chart ───────────────────────────────────────────── */
+function drawChart(daily){
+  var W=320,H=90,PT=15,PB=22,PL=12,PR=8;
+  var IW=W-PL-PR, IH=H-PT-PB;
+  var mx=daily.temperature_2m_max.map(Math.round);
+  var mn=daily.temperature_2m_min.map(Math.round);
+  var days=daily.time.map(function(t){return DS[new Date(t).getDay()];});
+  var n=days.length;
+  var all=mx.concat(mn);
+  var tMin=Math.min.apply(null,all)-3;
+  var tMax=Math.max.apply(null,all)+3;
+  var tR=tMax-tMin;
+  function xp(i){return PL+(i/(n-1))*IW;}
+  function yp(t){return PT+(1-(t-tMin)/tR)*IH;}
+  function line(arr,col){
+    var pts=arr.map(function(t,i){return xp(i)+","+yp(t);}).join(" ");
+    var dots=arr.map(function(t,i){
+      return '<circle cx="'+xp(i)+'" cy="'+yp(t)+'" r="4" fill="'+col+'"/>'+
+             '<text x="'+xp(i)+'" y="'+(yp(t)-7)+'" text-anchor="middle" fill="'+col+'" font-size="10" font-weight="700">'+t+'°</text>';
+    }).join("");
+    return '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>'+dots;
+  }
+  var lbls=days.map(function(d,i){
+    return '<text x="'+xp(i)+'" y="'+(H)+'" text-anchor="middle" fill="rgba(255,255,255,.4)" font-size="11">'+d+'</text>';
+  }).join("");
+  var grid=[0,.5,1].map(function(f){
+    var y=PT+f*IH;
+    return '<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="rgba(255,255,255,.05)" stroke-dasharray="3 3"/>';
+  }).join("");
+  document.getElementById("chart-svg").innerHTML=grid+line(mx,"#ff9500")+line(mn,"#00cfff")+lbls;
+}
+
+/* ── Tabs ────────────────────────────────────────────────── */
+function setTab(id){
+  ["today","week","chart"].forEach(function(t){
+    document.getElementById("tp-"+t).style.display=t===id?"block":"none";
+    var btn=document.querySelector('.tab-btn[data-t="'+t+'"]');
+    if(btn)btn.classList.toggle("on",t===id);
+  });
+}
+
+/* ── Notifications ───────────────────────────────────────── */
+function toggleNotif(){
+  var btn=document.getElementById("btn-bell");
+  if(!notifOn){
+    var cur=wdata&&wdata.current;
+    var label=cur?wmo(cur.weather_code)[0]:"";
+    var body=cur?Math.round(cur.temperature_2m)+"°C · "+label+" · Ветер "+cur.wind_speed_10m.toFixed(1)+" м/с":"Погода Актау";
+    if("Notification"in window){
+      Notification.requestPermission().then(function(p){
+        if(p==="granted")new Notification("📍 Актау — погода сегодня",{body:body});
+      });
+    }
+    notifOn=true;btn.classList.add("on");btn.textContent="🔔";
+    showToast("🔔 Уведомления включены");
+  }else{
+    notifOn=false;btn.classList.remove("on");btn.textContent="🔕";
+    showToast("🔕 Уведомления отключены");
+  }
+}
+
+/* ── Helper ──────────────────────────────────────────────── */
+function $(id,val){var el=document.getElementById(id);if(el)el.textContent=val;}
+
+/* ── Start ───────────────────────────────────────────────── */
+init();
+</script>
+</body>
+</html>
